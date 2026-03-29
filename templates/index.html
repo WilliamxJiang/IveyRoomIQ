@@ -1,0 +1,798 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI SmartSpace Digital Twin</title>
+    <style>
+      :root {
+        --ivey-green: #004b45;
+        --ivey-purple: #522d80;
+        --ink: #132018;
+        --paper: #f6f5f2;
+        --card: #ffffff;
+        --muted: #617065;
+      }
+      body {
+        font-family: "Berthold Walbaum", "Baskerville", "Times New Roman", serif;
+        margin: 0;
+        padding: 28px;
+        background: linear-gradient(145deg, #f7f6f3 0%, #f0f2ee 100%);
+        color: var(--ink);
+      }
+      .wrap {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid rgba(19, 32, 24, 0.09);
+        border-radius: 16px;
+        padding: 20px 22px;
+        box-shadow: 0 14px 35px rgba(0, 75, 69, 0.08);
+      }
+      .row {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+      .top-grid {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr;
+        gap: 16px;
+      }
+      .split {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr;
+        gap: 16px;
+      }
+      .top-right-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        min-width: 0;
+      }
+      @media (max-width: 980px) {
+        .top-grid,
+        .split {
+          grid-template-columns: 1fr;
+        }
+      }
+      .kpi {
+        flex: 1 1 180px;
+        padding: 16px;
+        border-radius: 14px;
+        background: rgba(0, 0, 0, 0.25);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .label {
+        font-size: 11px;
+        color: var(--muted);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .value {
+        font-size: 34px;
+        margin-top: 8px;
+        font-weight: 600;
+        color: var(--ivey-green);
+      }
+      .status-pill {
+        display: inline-block;
+        padding: 7px 12px;
+        border-radius: 999px;
+        font-weight: 700;
+        margin-top: 10px;
+        font-size: 12px;
+        letter-spacing: 0.03em;
+      }
+      .ok {
+        background: rgba(0, 75, 69, 0.1);
+        border: 1px solid rgba(0, 75, 69, 0.3);
+        color: var(--ivey-green);
+      }
+      .bad {
+        background: rgba(82, 45, 128, 0.12);
+        border: 1px solid rgba(82, 45, 128, 0.35);
+        color: var(--ivey-purple);
+      }
+      .muted {
+        color: var(--muted);
+        margin-top: 14px;
+        font-size: 13px;
+      }
+      code {
+        background: rgba(0, 75, 69, 0.08);
+        padding: 2px 6px;
+        border-radius: 8px;
+      }
+      #scene {
+        width: 100%;
+        height: 420px;
+        border-radius: 12px;
+        border: 1px solid rgba(19, 32, 24, 0.12);
+        background: #f8f9f7;
+        user-select: none;
+        touch-action: none;
+      }
+      .room-list {
+        margin-top: 12px;
+      }
+      .room-item {
+        margin-bottom: 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(19, 32, 24, 0.1);
+        background: #f9fbfa;
+        overflow: hidden;
+      }
+      .room-item.selected {
+        border-color: rgba(82, 45, 128, 0.45);
+        box-shadow: 0 8px 20px rgba(82, 45, 128, 0.12);
+      }
+      .room-head {
+        width: 100%;
+        text-align: left;
+        border: 0;
+        background: transparent;
+        display: grid;
+        grid-template-columns: 1.5fr 0.8fr 1fr;
+        gap: 8px;
+        padding: 12px;
+        font-family: inherit;
+        cursor: pointer;
+      }
+      .room-head:hover {
+        background: rgba(0, 75, 69, 0.05);
+      }
+      .room-details {
+        max-height: 0;
+        opacity: 0;
+        overflow: hidden;
+        transition: max-height 280ms ease, opacity 220ms ease;
+        border-top: 1px solid rgba(19, 32, 24, 0.08);
+      }
+      .room-item.details-expanded .room-details {
+        max-height: 220px;
+        opacity: 1;
+      }
+      .room-details-inner {
+        padding: 12px;
+      }
+      .details-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .detail-tile {
+        padding: 10px;
+        border-radius: 10px;
+        border: 1px solid rgba(19, 32, 24, 0.1);
+        background: #ffffff;
+        font-size: 12px;
+      }
+      .booking-actions {
+        margin-top: 10px;
+        display: flex;
+        gap: 8px;
+      }
+      .btn {
+        border: 0;
+        border-radius: 10px;
+        padding: 8px 10px;
+        font-weight: 600;
+        font-family: inherit;
+        font-size: 12px;
+      }
+      .btn-primary {
+        background: var(--ivey-green);
+        color: #fff;
+      }
+      .btn-soft {
+        background: rgba(82, 45, 128, 0.12);
+        color: var(--ivey-purple);
+      }
+      .tag {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .tag.ok {
+        background: rgba(0, 75, 69, 0.12);
+        color: var(--ivey-green);
+      }
+      .tag.bad {
+        background: rgba(82, 45, 128, 0.14);
+        color: var(--ivey-purple);
+      }
+      .floorplan {
+        margin-top: 12px;
+        width: 100%;
+        border-radius: 12px;
+        border: 1px solid rgba(19, 32, 24, 0.12);
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 14px;
+      }
+      .brand img {
+        height: 44px;
+        width: auto;
+      }
+      .brand h1 {
+        margin: 0;
+        font-size: 22px;
+        font-weight: 600;
+        color: var(--ivey-green);
+      }
+      .brand p {
+        margin: 2px 0 0;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      #selectedPanel {
+        display: none;
+      }
+      #selectedPanel.active {
+        display: block;
+      }
+      .student-profile {
+        display: flex;
+        gap: 16px;
+        align-items: flex-start;
+        margin-top: 12px;
+      }
+      .student-avatar {
+        width: 88px;
+        height: 88px;
+        border-radius: 12px;
+        object-fit: cover;
+        border: 2px solid rgba(0, 75, 69, 0.2);
+        box-shadow: 0 6px 16px rgba(0, 75, 69, 0.12);
+        flex-shrink: 0;
+      }
+      .student-name {
+        font-size: 22px;
+        font-weight: 600;
+        color: var(--ivey-green);
+        margin: 0;
+        line-height: 1.25;
+      }
+      .student-meta {
+        font-size: 13px;
+        color: var(--ivey-purple);
+        font-weight: 600;
+        margin-top: 4px;
+        letter-spacing: 0.02em;
+      }
+      .student-bio {
+        margin-top: 10px;
+        margin-bottom: 0;
+        font-size: 13px;
+        line-height: 1.45;
+      }
+      .student-contact {
+        margin-top: 8px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="brand">
+        <img src="/logo.png" alt="Ivey Logo" />
+        <div>
+          <h1>AI SmartSpace</h1>
+          <p>Live Occupancy Digital Twin</p>
+        </div>
+      </div>
+      <div class="top-grid">
+        <div class="card">
+          <div class="label">Building Row</div>
+          <div class="value" id="roomName">Ivey Row 1220-1210-1200</div>
+          <div class="muted">
+            Auto-refreshing every second from <code>/api/rooms</code>.
+          </div>
+        </div>
+        <div class="top-right-stack">
+          <div class="card" id="studentProfileCard">
+            <div class="label">Student profile</div>
+            <div class="student-profile">
+              <img
+                class="student-avatar"
+                src="/profile.png"
+                alt="William Jiang"
+                width="88"
+                height="88"
+              />
+              <div>
+                <p class="student-name">William Jiang</p>
+                <p class="student-meta">HBA' 27 | Section 7</p>
+                <p class="student-bio muted">
+                  Ivey HBA candidate exploring how live spaces data can make booking and collaboration
+                  smarter on campus.
+                </p>
+                <p class="student-contact">AI SmartSpace · Prototype dashboard</p>
+              </div>
+            </div>
+          </div>
+          <div class="card" id="selectedPanel">
+            <div class="label">Selected Room</div>
+            <div class="value" id="selectedRoomName">-</div>
+            <div class="muted" id="selectedRoomMeta">Select a breakout room from the list or 3D view.</div>
+            <div style="margin-top: 10px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap">
+              <span class="tag ok" id="selectedRoomBookable">Bookable</span>
+              <span class="status-pill ok" id="selectedStatusPill" style="display: none">Available</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="height: 16px"></div>
+
+      <div class="split">
+        <div class="card">
+          <div class="label">3D Occupancy View (Row MVP)</div>
+          <div id="scene"></div>
+          <div class="muted">
+            The row slowly rotates only when no room is selected. Drag to rotate manually; while you
+            press or drag, spin pauses. Select a breakout room from the list or 3D view to focus
+            (rotation stops). Click empty space or a classroom to zoom out and resume rotation.
+          </div>
+        </div>
+        <div class="card">
+          <div class="label">Per-Room Live Status</div>
+          <div id="roomList" class="room-list"></div>
+          <img class="floorplan" src="/floorplan.png" alt="Floorplan" />
+          <div class="muted">
+            Floorplan image is shown for reference while room geometry is refined.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+    <script>
+      const roomMeshById = new Map();
+      const roomKindById = new Map();
+      const roomDataById = new Map();
+      let selectedRoomId = null;
+      let sceneRef = null;
+      let cameraRef = null;
+      let modelGroupRef = null;
+      /** When true (pointer down on 3D view), idle auto-spin is paused so drag/click feels responsive. */
+      let pauseModelAutoRotate = false;
+      let currentLookAt = new THREE.Vector3(0, 0, 0);
+      let desiredLookAt = new THREE.Vector3(0, 0, 0);
+      let desiredCameraPos = new THREE.Vector3(0, 42, 50);
+      const DEFAULT_CAMERA_POS = new THREE.Vector3(0, 42, 50);
+      const DEFAULT_LOOK_AT = new THREE.Vector3(0, 0, 0);
+      const raycaster = new THREE.Raycaster();
+      const pointerNdc = new THREE.Vector2();
+      const ROT_X_MIN = -0.45;
+      const ROT_X_MAX = 0.55;
+      const DRAG_THRESHOLD_PX = 6;
+
+      function setTopRightForRoomSelected(isRoomSelected) {
+        const profile = document.getElementById("studentProfileCard");
+        const panel = document.getElementById("selectedPanel");
+        if (profile) profile.style.display = isRoomSelected ? "none" : "block";
+        if (panel) {
+          if (isRoomSelected) panel.classList.add("active");
+          else panel.classList.remove("active");
+        }
+      }
+
+      function resetMapView() {
+        selectedRoomId = null;
+        setTopRightForRoomSelected(false);
+        document.getElementById("selectedRoomName").textContent = "-";
+        document.getElementById("selectedRoomMeta").textContent =
+          "Select a breakout room from the list or 3D view.";
+        updateSelectedStatusPill(null);
+
+        desiredCameraPos.copy(DEFAULT_CAMERA_POS);
+        desiredLookAt.copy(DEFAULT_LOOK_AT);
+
+        roomMeshById.forEach((mesh, id) => {
+          const kind = roomKindById.get(id);
+          const occ = roomDataById.get(id)?.occupancy > 0;
+          mesh.material.emissive.setHex(0x000000);
+          mesh.material.emissiveIntensity = 0;
+          mesh.scale.set(1, 1, 1);
+          if (kind === "breakout") {
+            mesh.material.color.setHex(occ ? 0x522d80 : 0x0c7f71);
+          } else {
+            mesh.material.color.setHex(0x57736f);
+          }
+        });
+        renderRoomTable();
+      }
+
+      function resolvePickedRoomFromObject(obj) {
+        let cur = obj;
+        while (cur) {
+          if (cur.userData && cur.userData.roomId) {
+            return { roomId: cur.userData.roomId, kind: cur.userData.kind };
+          }
+          cur = cur.parent;
+        }
+        return null;
+      }
+
+      function attachModelInteraction(renderer, camera, modelGroup) {
+        const el = renderer.domElement;
+        el.style.cursor = "grab";
+
+        let dragging = false;
+        let dragPointerId = null;
+        let lastX = 0;
+        let lastY = 0;
+        let dragMoved = 0;
+
+        function setPointerFromEvent(ev) {
+          const rect = el.getBoundingClientRect();
+          pointerNdc.x = ((ev.clientX - rect.left) / rect.width) * 2 - 1;
+          pointerNdc.y = -((ev.clientY - rect.top) / rect.height) * 2 + 1;
+        }
+
+        function tryPick(ev) {
+          setPointerFromEvent(ev);
+          raycaster.setFromCamera(pointerNdc, camera);
+          const hits = raycaster.intersectObjects(modelGroup.children, true);
+          for (const hit of hits) {
+            const pick = resolvePickedRoomFromObject(hit.object);
+            if (pick && pick.kind === "breakout") {
+              selectRoom(pick.roomId);
+              return;
+            }
+            if (pick && pick.kind === "classroom") {
+              resetMapView();
+              return;
+            }
+          }
+          resetMapView();
+        }
+
+        el.addEventListener("pointerdown", (ev) => {
+          if (ev.button !== 0) return;
+          pauseModelAutoRotate = true;
+          dragging = true;
+          dragPointerId = ev.pointerId;
+          dragMoved = 0;
+          lastX = ev.clientX;
+          lastY = ev.clientY;
+          el.style.cursor = "grabbing";
+          try {
+            el.setPointerCapture(ev.pointerId);
+          } catch (e) { /* ignore */ }
+        });
+
+        el.addEventListener("pointermove", (ev) => {
+          if (!dragging || ev.pointerId !== dragPointerId) return;
+          const dx = ev.clientX - lastX;
+          const dy = ev.clientY - lastY;
+          lastX = ev.clientX;
+          lastY = ev.clientY;
+          dragMoved += Math.abs(dx) + Math.abs(dy);
+
+          modelGroup.rotation.y -= dx * 0.007;
+          modelGroup.rotation.x += dy * 0.0045;
+          modelGroup.rotation.x = Math.max(ROT_X_MIN, Math.min(ROT_X_MAX, modelGroup.rotation.x));
+        });
+
+        function endPointer(ev) {
+          if (!dragging || ev.pointerId !== dragPointerId) return;
+          dragging = false;
+          el.style.cursor = "grab";
+          try {
+            el.releasePointerCapture(dragPointerId);
+          } catch (e) { /* ignore */ }
+          dragPointerId = null;
+          pauseModelAutoRotate = false;
+
+          if (dragMoved < DRAG_THRESHOLD_PX) {
+            tryPick(ev);
+          }
+        }
+
+        el.addEventListener("pointerup", endPointer);
+        el.addEventListener("pointercancel", endPointer);
+        el.addEventListener("lostpointercapture", () => {
+          dragging = false;
+          dragPointerId = null;
+          pauseModelAutoRotate = false;
+          el.style.cursor = "grab";
+        });
+      }
+
+      function updateSelectedStatusPill(room) {
+        const pill = document.getElementById("selectedStatusPill");
+        if (!pill) return;
+        if (!room) {
+          pill.style.display = "none";
+          return;
+        }
+        pill.style.display = "inline-block";
+        const occ = room.occupancy > 0;
+        pill.textContent = occ ? "Occupied" : "Available";
+        pill.classList.remove("ok", "bad");
+        pill.classList.add(occ ? "bad" : "ok");
+      }
+
+      function makeLabelSprite(text) {
+        const canvas = document.createElement("canvas");
+        canvas.width = 256;
+        canvas.height = 96;
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "rgba(8, 12, 24, 0.88)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.65)";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
+        ctx.fillStyle = "#eaf2ff";
+        ctx.font = "bold 44px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+        const sprite = new THREE.Sprite(material);
+        sprite.scale.set(5.4, 2.0, 1);
+        return sprite;
+      }
+
+      function createDigitalTwinScene() {
+        const host = document.getElementById("scene");
+        const width = host.clientWidth;
+        const height = host.clientHeight;
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf8f9f7);
+        const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+        camera.position.set(0, 42, 50);
+        camera.lookAt(currentLookAt);
+        sceneRef = scene;
+        cameraRef = camera;
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(width, height);
+        host.appendChild(renderer.domElement);
+
+        scene.add(new THREE.AmbientLight(0xffffff, 0.62));
+        const dLight = new THREE.DirectionalLight(0xffffff, 0.85);
+        dLight.position.set(20, 35, 12);
+        scene.add(dLight);
+
+        const modelGroup = new THREE.Group();
+        modelGroupRef = modelGroup;
+        scene.add(modelGroup);
+
+        const floor = new THREE.Mesh(
+          new THREE.PlaneGeometry(80, 36),
+          new THREE.MeshStandardMaterial({ color: 0xe8ede8 })
+        );
+        floor.rotation.x = -Math.PI / 2;
+        floor.position.y = -1.2;
+        floor.userData.isFloor = true;
+        modelGroup.add(floor);
+
+        // Row MVP layout: 1220 / 1210 / 1200 with breakout rooms above.
+        const roomLayout = [
+          { room_id: "room-1220", label: "1220", kind: "classroom", x: -24, z: 2, w: 18, d: 12, h: 3.0 },
+          { room_id: "room-1210", label: "1210", kind: "classroom", x: 0, z: 2, w: 18, d: 12, h: 3.0 },
+          { room_id: "room-1200", label: "1200", kind: "classroom", x: 24, z: 2, w: 18, d: 12, h: 3.0 },
+
+          { room_id: "room-1226", label: "1226", kind: "breakout", x: -31, z: -10, w: 7.2, d: 4.8, h: 2.2 },
+          { room_id: "room-1224", label: "1224", kind: "breakout", x: -22, z: -10, w: 7.2, d: 4.8, h: 2.2 },
+          { room_id: "room-1218", label: "1218", kind: "breakout", x: -4.5, z: -10, w: 7.2, d: 4.8, h: 2.2 },
+          { room_id: "room-1212", label: "1212", kind: "breakout", x: 4.5, z: -10, w: 7.2, d: 4.8, h: 2.2 },
+          { room_id: "room-1206", label: "1206", kind: "breakout", x: 18.5, z: -10, w: 7.2, d: 4.8, h: 2.2 },
+          { room_id: "room-1204", label: "1204", kind: "breakout", x: 27.5, z: -10, w: 7.2, d: 4.8, h: 2.2 },
+        ];
+
+        roomLayout.forEach((r) => {
+          const baseColor = r.kind === "breakout" ? 0x0c7f71 : 0x57736f;
+          const mesh = new THREE.Mesh(
+            new THREE.BoxGeometry(r.w, r.h, r.d),
+            new THREE.MeshStandardMaterial({ color: baseColor, emissive: 0x000000 })
+          );
+          mesh.position.set(r.x, r.h / 2 - 1.0, r.z);
+          mesh.userData.roomId = r.room_id;
+          mesh.userData.kind = r.kind;
+          mesh.userData.label = r.label;
+          const labelSprite = makeLabelSprite(r.label);
+          labelSprite.position.set(0, r.h / 2 + 1.25, 0);
+          mesh.add(labelSprite);
+          modelGroup.add(mesh);
+          roomMeshById.set(r.room_id, mesh);
+          roomKindById.set(r.room_id, r.kind);
+        });
+
+        attachModelInteraction(renderer, camera, modelGroup);
+
+        function renderLoop() {
+          requestAnimationFrame(renderLoop);
+
+          if (modelGroupRef && !pauseModelAutoRotate && selectedRoomId === null) {
+            modelGroupRef.rotation.y += 0.0015;
+          }
+
+          // Smooth camera tween for selected room focus.
+          camera.position.lerp(desiredCameraPos, 0.06);
+          currentLookAt.lerp(desiredLookAt, 0.08);
+          camera.lookAt(currentLookAt);
+          renderer.render(scene, camera);
+        }
+        renderLoop();
+      }
+
+      function onRoomHeadClick(roomId) {
+        if (selectedRoomId === roomId) {
+          resetMapView();
+          return;
+        }
+        selectRoom(roomId);
+      }
+
+      function selectRoom(roomId) {
+        selectedRoomId = roomId;
+        let room = roomDataById.get(roomId);
+        if (!room) {
+          const mesh = roomMeshById.get(roomId);
+          const nm = mesh?.userData?.label ? String(mesh.userData.label) : String(roomId).replace(/^room-/, "");
+          room = {
+            room_id: roomId,
+            room_name: nm,
+            occupancy: 0,
+            entries: 0,
+            exits: 0,
+            status: "Available",
+          };
+        }
+
+        setTopRightForRoomSelected(true);
+        document.getElementById("selectedRoomName").textContent = room.room_name;
+        document.getElementById("selectedRoomMeta").textContent =
+          `Occupancy ${room.occupancy} | Entries ${room.entries} | Exits ${room.exits}`;
+        updateSelectedStatusPill(room);
+
+        // Highlight selected mesh and gently zoom/focus the camera.
+        roomMeshById.forEach((mesh, id) => {
+          const isSelected = id === roomId;
+          const kind = roomKindById.get(id);
+          const occ = roomDataById.get(id)?.occupancy > 0;
+          if (isSelected) {
+            mesh.material.emissive.setHex(0x3e2a62);
+            mesh.material.emissiveIntensity = 0.35;
+            mesh.scale.set(1.06, 1.06, 1.06);
+          } else {
+            mesh.material.emissive.setHex(0x000000);
+            mesh.material.emissiveIntensity = 0;
+            mesh.scale.set(1, 1, 1);
+            if (kind === "breakout") {
+              mesh.material.color.setHex(occ ? 0x522d80 : 0x0c7f71);
+            } else {
+              mesh.material.color.setHex(0x57736f);
+            }
+          }
+        });
+
+        const selectedMesh = roomMeshById.get(roomId);
+        if (selectedMesh) {
+          const worldPos = new THREE.Vector3();
+          selectedMesh.getWorldPosition(worldPos);
+          desiredLookAt = worldPos.clone();
+          desiredLookAt.y = 0.4;
+          desiredCameraPos = worldPos.clone().add(new THREE.Vector3(0, 14, 19));
+        }
+
+        renderRoomTable();
+      }
+
+      function renderRoomTable() {
+        const root = document.getElementById("roomList");
+        root.innerHTML = "";
+        const rooms = Array.from(roomDataById.values());
+        const classroomIds = new Set(["room-1220", "room-1210", "room-1200"]);
+        rooms.forEach((room) => {
+          if (classroomIds.has(room.room_id)) return;
+          const occupied = room.occupancy > 0;
+          const isSelected = selectedRoomId === room.room_id;
+
+          const item = document.createElement("div");
+          item.className = `room-item${isSelected ? " selected details-expanded" : ""}`;
+          item.innerHTML = `
+            <button class="room-head" data-room-id="${room.room_id}">
+              <div>
+                <strong>${room.room_name}</strong><br />
+                <span class="tag ok">Bookable</span>
+              </div>
+              <div>Occ: <strong>${room.occupancy}</strong></div>
+              <div><span class="tag ${occupied ? "bad" : "ok"}">${room.status}</span></div>
+            </button>
+            <div class="room-details">
+              <div class="room-details-inner">
+                <div class="details-grid">
+                  <div class="detail-tile"><strong>Entries</strong><br />${room.entries}</div>
+                  <div class="detail-tile"><strong>Exits</strong><br />${room.exits}</div>
+                  <div class="detail-tile"><strong>Suggested Slot</strong><br />Today 3:00 PM</div>
+                  <div class="detail-tile"><strong>Duration</strong><br />30 minutes</div>
+                </div>
+                <div class="booking-actions">
+                  <button class="btn btn-primary">Book Now</button>
+                  <button class="btn btn-soft">Reserve for Later</button>
+                </div>
+              </div>
+            </div>
+          `;
+          root.appendChild(item);
+        });
+
+        root.querySelectorAll(".room-head").forEach((btn) => {
+          btn.addEventListener("click", () => onRoomHeadClick(btn.dataset.roomId));
+        });
+      }
+
+      function updateRoomTable(rooms) {
+        rooms.forEach((room) => {
+          roomDataById.set(room.room_id, room);
+        });
+        renderRoomTable();
+      }
+
+      function updateRoomMeshes(rooms) {
+        rooms.forEach((room) => {
+          const mesh = roomMeshById.get(room.room_id);
+          if (!mesh) return;
+          const kind = roomKindById.get(room.room_id);
+          const occupied = room.occupancy > 0;
+          if (kind === "breakout") {
+            mesh.material.color.setHex(occupied ? 0x522d80 : 0x0c7f71);
+          } else {
+            mesh.material.color.setHex(0x57736f);
+          }
+        });
+        if (selectedRoomId && roomDataById.has(selectedRoomId)) {
+          const selectedMesh = roomMeshById.get(selectedRoomId);
+          if (selectedMesh) {
+            selectedMesh.material.emissive.setHex(0x3e2a62);
+            selectedMesh.material.emissiveIntensity = 0.35;
+          }
+        }
+      }
+
+      async function refresh() {
+        try {
+          const res = await fetch("/api/rooms", { cache: "no-store" });
+          const data = await res.json();
+
+          document.getElementById("roomName").textContent = data.building_name;
+
+          updateRoomTable(data.rooms || []);
+          updateRoomMeshes(data.rooms || []);
+          if (selectedRoomId) {
+            const selected = roomDataById.get(selectedRoomId);
+            if (selected) {
+              document.getElementById("selectedRoomMeta").textContent =
+                `Occupancy ${selected.occupancy} | Entries ${selected.entries} | Exits ${selected.exits}`;
+              updateSelectedStatusPill(selected);
+            }
+          }
+        } catch (e) {
+          // Keep the last values if fetch fails.
+        }
+      }
+
+      createDigitalTwinScene();
+      refresh();
+      setInterval(refresh, 1000);
+    </script>
+  </body>
+</html>
+
