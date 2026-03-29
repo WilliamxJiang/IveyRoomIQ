@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>AI SmartSpace Digital Twin</title>
+    <title>SmartSpace · Digital Twin</title>
     <style>
       :root {
         --ivey-green: #004b45;
@@ -212,6 +212,79 @@
         border-radius: 12px;
         border: 1px solid rgba(19, 32, 24, 0.12);
       }
+      .chat-section {
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid rgba(19, 32, 24, 0.08);
+      }
+      .chat-hint {
+        margin-top: 6px;
+        margin-bottom: 0;
+        font-size: 12px;
+      }
+      .chat-log {
+        margin-top: 12px;
+        max-height: 160px;
+        overflow-y: auto;
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: #f4f6f5;
+        border: 1px solid rgba(19, 32, 24, 0.08);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+      .chat-msg {
+        margin-bottom: 10px;
+        padding: 8px 10px;
+        border-radius: 10px;
+        max-width: 92%;
+      }
+      .chat-msg:last-child {
+        margin-bottom: 0;
+      }
+      .chat-msg.user {
+        margin-left: auto;
+        background: rgba(0, 75, 69, 0.12);
+        border: 1px solid rgba(0, 75, 69, 0.2);
+        color: var(--ink);
+      }
+      .chat-msg.bot {
+        background: #fff;
+        border: 1px solid rgba(19, 32, 24, 0.1);
+        color: var(--ink);
+      }
+      .chat-msg .who {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--muted);
+        margin-bottom: 4px;
+      }
+      .chat-form {
+        display: flex;
+        gap: 10px;
+        margin-top: 12px;
+        align-items: center;
+      }
+      .chat-input {
+        flex: 1;
+        min-width: 0;
+        border: 1px solid rgba(19, 32, 24, 0.15);
+        border-radius: 10px;
+        padding: 10px 12px;
+        font-family: inherit;
+        font-size: 13px;
+        background: #fff;
+      }
+      .chat-input:focus {
+        outline: 2px solid rgba(0, 75, 69, 0.25);
+        outline-offset: 1px;
+        border-color: rgba(0, 75, 69, 0.35);
+      }
+      .chat-send {
+        flex-shrink: 0;
+        padding: 10px 16px;
+      }
       .brand {
         display: flex;
         align-items: center;
@@ -221,6 +294,9 @@
       .brand img {
         height: 44px;
         width: auto;
+        display: block;
+        /* Knock out typical flat white logo mats on our light page (true transparency in PNG is ideal). */
+        mix-blend-mode: multiply;
       }
       .brand h1 {
         margin: 0;
@@ -274,20 +350,15 @@
         font-size: 13px;
         line-height: 1.45;
       }
-      .student-contact {
-        margin-top: 8px;
-        font-size: 12px;
-        color: var(--muted);
-      }
     </style>
   </head>
   <body>
     <div class="wrap">
       <div class="brand">
-        <img src="/logo.png" alt="Ivey Logo" />
+        <img src="/logo.png" alt="Ivey Business School" />
         <div>
-          <h1>AI SmartSpace</h1>
-          <p>Live Occupancy Digital Twin</p>
+          <h1>SmartSpace</h1>
+          <p>Live occupancy digital twin</p>
         </div>
       </div>
       <div class="top-grid">
@@ -295,7 +366,7 @@
           <div class="label">Building Row</div>
           <div class="value" id="roomName">Ivey Row 1220-1210-1200</div>
           <div class="muted">
-            Auto-refreshing every second from <code>/api/rooms</code>.
+            Made with &lt;3 from LT8 for LIT!
           </div>
         </div>
         <div class="top-right-stack">
@@ -311,12 +382,8 @@
               />
               <div>
                 <p class="student-name">William Jiang</p>
-                <p class="student-meta">HBA' 27 | Section 7</p>
-                <p class="student-bio muted">
-                  Ivey HBA candidate exploring how live spaces data can make booking and collaboration
-                  smarter on campus.
-                </p>
-                <p class="student-contact">AI SmartSpace · Prototype dashboard</p>
+                <p class="student-meta">HBA1 | Section VII | 251342938</p>
+                <p class="student-bio muted">Ivey HBA &amp; Software Engineering Dual Degree Candidate</p>
               </div>
             </div>
           </div>
@@ -342,6 +409,24 @@
             The row slowly rotates only when no room is selected. Drag to rotate manually; while you
             press or drag, spin pauses. Select a breakout room from the list or 3D view to focus
             (rotation stops). Click empty space or a classroom to zoom out and resume rotation.
+          </div>
+          <div class="chat-section">
+            <div class="label">Ask SmartSpace</div>
+            <p class="muted chat-hint">
+              Quick answers about busy times, live occupancy, and booking in this prototype.
+            </p>
+            <div id="chatLog" class="chat-log" aria-live="polite"></div>
+            <form id="chatForm" class="chat-form">
+              <input
+                type="text"
+                id="chatInput"
+                class="chat-input"
+                placeholder="e.g. What times are busiest at Ivey?"
+                autocomplete="off"
+                maxlength="500"
+              />
+              <button type="submit" class="btn btn-primary chat-send">Send</button>
+            </form>
           </div>
         </div>
         <div class="card">
@@ -788,6 +873,47 @@
           // Keep the last values if fetch fails.
         }
       }
+
+      function appendChatMessage(role, text) {
+        const log = document.getElementById("chatLog");
+        if (!log) return;
+        const div = document.createElement("div");
+        div.className = `chat-msg ${role}`;
+        const who = document.createElement("div");
+        who.className = "who";
+        who.textContent = role === "user" ? "You" : "SmartSpace";
+        const body = document.createElement("div");
+        body.textContent = text;
+        div.appendChild(who);
+        div.appendChild(body);
+        log.appendChild(div);
+        log.scrollTop = log.scrollHeight;
+      }
+
+      document.getElementById("chatForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const input = document.getElementById("chatInput");
+        const msg = (input.value || "").trim();
+        if (!msg) return;
+        appendChatMessage("user", msg);
+        input.value = "";
+        try {
+          const res = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: msg }),
+          });
+          const data = await res.json();
+          appendChatMessage("bot", data.reply || "No reply.");
+        } catch (err) {
+          appendChatMessage("bot", "Could not reach the server. Check that the app is running.");
+        }
+      });
+
+      appendChatMessage(
+        "bot",
+        "Ask something short—for example least busy times, whether the building or cafeteria is open now, peak hours, or how busy the tracked rooms are."
+      );
 
       createDigitalTwinScene();
       refresh();

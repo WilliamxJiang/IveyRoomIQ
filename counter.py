@@ -1,5 +1,5 @@
 """
-AI SmartSpace - People Counter (Computer Vision)
+SmartSpace - People Counter (Computer Vision)
 
 Install:
   python3 -m venv .venv
@@ -213,7 +213,7 @@ def run_counter(
 
         if show_video:
             try:
-                cv2.imshow("AI SmartSpace - People Counter", frame)
+                cv2.imshow("SmartSpace - People Counter", frame)
                 key = cv2.waitKey(1) & 0xFF
                 if key == ord("q"):
                     break

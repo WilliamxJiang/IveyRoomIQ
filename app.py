@@ -1,5 +1,5 @@
 """
-AI SmartSpace - Flask API + Dashboard
+SmartSpace - Flask API + Dashboard
 
 Install:
   python3 -m venv .venv
@@ -119,7 +119,7 @@ def index():
 @app.get("/api/status")
 def api_status():
     with STATE_LOCK:
-        room_name = str(STATE.get("room_name", "AI SmartSpace"))
+        room_name = str(STATE.get("room_name", "SmartSpace"))
         occupancy = int(STATE.get("occupancy", 0))
         entries = int(STATE.get("entries", 0))
         exits = int(STATE.get("exits", 0))
@@ -230,6 +230,157 @@ def profile_photo():
     if not PROFILE_PHOTO_PATH.exists():
         abort(404)
     return send_file(str(PROFILE_PHOTO_PATH), mimetype="image/png")
+
+
+def _chat_reply(message: str) -> str:
+    """Lightweight rule-based replies for the MVP assistant (no external LLM)."""
+    m = (message or "").lower().strip()
+    if not m:
+        return "Try a short question—for example when Ivey tends to be busiest."
+
+    with STATE_LOCK:
+        live_occ = int(STATE.get("occupancy", 0))
+
+    # --- Quiet / least busy (before generic “busy” peak answers) ---
+    if any(
+        k in m
+        for k in (
+            "least busy",
+            "quietest",
+            "quieter",
+            "quiet time",
+            "quiet times",
+            "calmest",
+            "calmer",
+            "slow period",
+            "slowest",
+            "emptiest",
+            "less busy",
+            "less crowded",
+            "not crowded",
+            "not busy",
+            "low traffic",
+            "empty",
+        )
+    ) or ("quiet" in m and ("when" in m or "time" in m or "best" in m)):
+        return (
+            "Generally quieter times at Ivey are early mornings before most classes (before ~9), "
+            "mid-afternoon lulls (often ~2–4, depending on the day), and evenings after core teaching "
+            "blocks. Weekends and reading week can be calmer too. Use the live breakout list on the "
+            "right—green “Available” rooms are your best signal for right now."
+        )
+
+    # --- Cafeteria / dining (not wired to live data) ---
+    if any(
+        k in m
+        for k in (
+            "cafeteria",
+            "caf ",
+            " the caf",
+            "dining hall",
+            "food court",
+            "where to eat",
+        )
+    ) or ("food" in m and "ivey" in m):
+        if any(k in m for k in ("open", "closed", "hours", "right now", "now", "today")):
+            return (
+                "This prototype doesn’t connect to live cafeteria or dining hours. For the Ivey "
+                "Building, check the Ivey / Western dining site, campus app, or posted hours near "
+                "the servery—hours often change for holidays and reading week."
+            )
+        return (
+            "I don’t have menus or hours in this demo. For what’s open at Ivey, check Western’s "
+            "dining site or signage in the building; SmartSpace here only shows breakout-room occupancy "
+            "for this row."
+        )
+
+    # --- Building open “right now” (no live hours API) ---
+    if (
+        "cafeteria" not in m
+        and "dining" not in m
+        and ("building" in m or "ivey" in m)
+        and ("open" in m or "closed" in m or "access" in m)
+        and any(k in m for k in ("now", "right now", "today", "currently", "still", "at this hour"))
+    ):
+        return (
+            "SmartSpace can’t verify real-time building access from here—there’s no live swipe or "
+            "hours feed in this prototype. For whether the Ivey Building is open now, use Western’s "
+            "official hours, the student handbook, or building signage. Weekday academic terms usually "
+            "follow published campus access rules."
+        )
+
+    # --- Peak / busiest times ---
+    if any(
+        k in m
+        for k in (
+            "busiest",
+            "peak",
+            "crowd",
+            "crowded",
+            "rush",
+            "busiest time",
+            "most busy",
+            "hectic",
+        )
+    ) or (
+        "busy" in m
+        and "least" not in m
+        and any(k in m for k in ("when", "what time", "time", "usually", "typically", "often"))
+    ):
+        return (
+            "At Ivey, shared spaces are often busiest between morning classes (roughly 9–11), "
+            "over lunch (11:30–2), and when afternoon sections change. Breakout rooms along this "
+            "row can fill quickly before deadlines and group meetings. The live panel above shows "
+            "current occupancy for these rooms so you can pick a quieter slot."
+        )
+
+    # --- Live occupancy for the tracked rooms (not building/cafeteria) ---
+    if (
+        any(k in m for k in ("right now", "currently", "at the moment", "how busy"))
+        and "building" not in m
+        and "cafeteria" not in m
+        and "dining" not in m
+        and "caf " not in m
+    ):
+        return (
+            f"From the doorway feed we’re tracking right now, counted occupancy in the focal room is {live_occ}. "
+            "Open the per-room list for breakout spaces on this row—each shows whether it’s available or occupied."
+        )
+
+    if any(k in m for k in ("book", "booking", "reserve", "reservation")):
+        return (
+            "In this prototype, pick a breakout room in the list or 3D view, then use Book Now or "
+            "Reserve for Later in the expanded row. A full system would connect that to your calendar "
+            "and room rules."
+        )
+
+    if any(k in m for k in ("hours", "open", "close", "when is", "when does")) and (
+        "building" in m or "ivey" in m or "facility" in m
+    ):
+        return (
+            "Official building access hours aren’t wired into this demo. Check Western / Ivey "
+            "facilities or your student handbook for Ivey Building hours; SmartSpace here is focused "
+            "on live occupancy for this row of rooms."
+        )
+
+    if any(k in m for k in ("hello", "hi ", "hey")):
+        return (
+            "Hi—ask about busiest or quietest times, whether the building or cafeteria is open (I’ll "
+            "point you to official sources), live breakout occupancy, or booking in this prototype."
+        )
+
+    return (
+        "I’m a small on-page assistant for this prototype. Try: when Ivey is busiest or quietest, "
+        "whether the building or cafeteria is open right now (I’ll explain limits), how busy tracked "
+        "rooms are, or how to book a breakout from the list."
+    )
+
+
+@app.post("/api/chat")
+def api_chat():
+    payload = request.get_json(silent=True) or {}
+    msg = str(payload.get("message", "")).strip()
+    return jsonify({"reply": _chat_reply(msg)})
 
 
 if __name__ == "__main__":
