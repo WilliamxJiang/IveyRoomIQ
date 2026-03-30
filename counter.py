@@ -40,7 +40,13 @@ class TrackState:
     last_seen_ts: float = 0.0
 
 
-def _side_of_line(cx: float, line_x: int) -> str:
+def _side_of_line(cx: float, line_x: int, deadband_px: int = 0) -> Optional[str]:
+    """
+    Returns which side of the line the centroid is on.
+    If deadband_px > 0, returns None while centroid is near the line (neutral zone).
+    """
+    if deadband_px > 0 and abs(cx - line_x) <= deadband_px:
+        return None
     return "L" if cx < line_x else "R"
 
 
@@ -82,7 +88,9 @@ def run_counter(
     active_ids: Dict[int, float] = {}
 
     # Tuning knobs
-    away_margin_px = 60  # must move this far from the line to re-arm after a count
+    # Neutral zone around the line reduces jitter-induced side flips.
+    line_deadband_px = 28
+    away_margin_px = 48  # after count, must move away this far to re-arm
     stale_track_seconds = 2.0  # forget tracks not seen recently (helps keep memory clean)
 
     # Initialize shared state
@@ -110,6 +118,7 @@ def run_counter(
             verbose=False,
             conf=0.35,
             iou=0.5,
+            tracker="bytetrack.yaml",
         )
 
         now = time.time()
@@ -132,7 +141,7 @@ def run_counter(
                     track_id = int(ids_np[i])
 
                 cx, cy = _box_centroid_xyxy(xyxy[i])
-                current_side = _side_of_line(cx, line_x)
+                current_side = _side_of_line(cx, line_x, deadband_px=line_deadband_px)
 
                 # Draw box + ID for visibility
                 x1, y1, x2, y2 = [int(v) for v in xyxy[i].tolist()]
@@ -168,13 +177,14 @@ def run_counter(
                 if st.cooldown:
                     if abs(cx - line_x) > away_margin_px:
                         st.cooldown = False
-                    st.last_side = current_side
+                    if current_side is not None:
+                        st.last_side = current_side
                     continue
 
                 # Line crossing logic:
                 # - Determine if the tracked centroid changed sides relative to the line.
                 # - Count entry/exit only on a side-change event.
-                if st.last_side != current_side:
+                if current_side is not None and st.last_side is not None and st.last_side != current_side:
                     if st.last_side == "L" and current_side == "R":
                         with lock:
                             shared_state["entries"] += 1
@@ -186,7 +196,8 @@ def run_counter(
                             shared_state["occupancy"] = max(0, shared_state["occupancy"] - 1)
                         st.cooldown = True
 
-                st.last_side = current_side
+                if current_side is not None:
+                    st.last_side = current_side
 
         # Forget stale tracks so IDs don't grow forever
         for tid, last_seen in list(active_ids.items()):
@@ -196,6 +207,21 @@ def run_counter(
 
         # Draw doorway line + overlay counts
         cv2.line(frame, (line_x, 0), (line_x, h), (255, 0, 0), 3)
+        # Visualize neutral crossing zone to help align doorway/camera position.
+        cv2.line(
+            frame,
+            (line_x - line_deadband_px, 0),
+            (line_x - line_deadband_px, h),
+            (160, 160, 160),
+            1,
+        )
+        cv2.line(
+            frame,
+            (line_x + line_deadband_px, 0),
+            (line_x + line_deadband_px, h),
+            (160, 160, 160),
+            1,
+        )
         with lock:
             occ = int(shared_state.get("occupancy", 0))
             ent = int(shared_state.get("entries", 0))

@@ -78,23 +78,58 @@
         color: var(--ivey-green);
       }
       .status-pill {
-        display: inline-block;
-        padding: 7px 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 14px;
         border-radius: 999px;
         font-weight: 700;
         margin-top: 10px;
         font-size: 12px;
-        letter-spacing: 0.03em;
+        letter-spacing: 0.02em;
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.04);
+        transition: transform 160ms ease, box-shadow 160ms ease;
+      }
+      .status-pill::before {
+        content: "";
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        display: inline-block;
+        box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.03);
+      }
+      .status-pill:hover {
+        transform: translateY(-1px);
       }
       .ok {
-        background: rgba(0, 75, 69, 0.1);
-        border: 1px solid rgba(0, 75, 69, 0.3);
+        background: linear-gradient(180deg, rgba(0, 75, 69, 0.14), rgba(0, 75, 69, 0.08));
+        border: 1px solid rgba(0, 75, 69, 0.28);
         color: var(--ivey-green);
+        box-shadow: inset 0 0 0 1px rgba(0, 75, 69, 0.08), 0 2px 8px rgba(0, 75, 69, 0.08);
+      }
+      .ok::before {
+        background: #0c7f71;
+        box-shadow: 0 0 0 4px rgba(12, 127, 113, 0.18);
       }
       .bad {
-        background: rgba(82, 45, 128, 0.12);
-        border: 1px solid rgba(82, 45, 128, 0.35);
+        background: linear-gradient(180deg, rgba(82, 45, 128, 0.18), rgba(82, 45, 128, 0.11));
+        border: 1px solid rgba(82, 45, 128, 0.33);
         color: var(--ivey-purple);
+        box-shadow: inset 0 0 0 1px rgba(82, 45, 128, 0.09), 0 2px 8px rgba(82, 45, 128, 0.1);
+      }
+      .bad::before {
+        background: #6b3ea7;
+        box-shadow: 0 0 0 4px rgba(107, 62, 167, 0.18);
+      }
+      .warn {
+        background: linear-gradient(180deg, rgba(172, 116, 34, 0.2), rgba(172, 116, 34, 0.12));
+        border: 1px solid rgba(172, 116, 34, 0.35);
+        color: #8b5e1e;
+        box-shadow: inset 0 0 0 1px rgba(172, 116, 34, 0.08), 0 2px 8px rgba(172, 116, 34, 0.1);
+      }
+      .warn::before {
+        background: #ac7422;
+        box-shadow: 0 0 0 4px rgba(172, 116, 34, 0.18);
       }
       .muted {
         color: var(--muted);
@@ -124,6 +159,7 @@
         border: 1px solid rgba(19, 32, 24, 0.1);
         background: #f9fbfa;
         overflow: hidden;
+        position: relative;
       }
       .room-item.selected {
         border-color: rgba(82, 45, 128, 0.45);
@@ -135,9 +171,10 @@
         border: 0;
         background: transparent;
         display: grid;
-        grid-template-columns: 1.5fr 0.8fr 1fr;
+        grid-template-columns: 1.6fr 0.9fr;
         gap: 8px;
         padding: 12px;
+        padding-right: 96px;
         font-family: inherit;
         cursor: pointer;
       }
@@ -205,6 +242,64 @@
       .tag.bad {
         background: rgba(82, 45, 128, 0.14);
         color: var(--ivey-purple);
+      }
+      .status-ribbon {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 126px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        padding: 0 8px;
+        border: 1px solid transparent;
+        z-index: 3;
+        pointer-events: none;
+        clip-path: polygon(0 0, 100% 0, 100% 100%, 16% 100%);
+      }
+      .status-ribbon.ok {
+        background: linear-gradient(180deg, rgba(12, 127, 113, 0.93), rgba(0, 75, 69, 0.93));
+        border-color: rgba(0, 75, 69, 0.55);
+        color: #f2fffc;
+      }
+      .status-ribbon.bad {
+        background: linear-gradient(180deg, rgba(107, 62, 167, 0.95), rgba(82, 45, 128, 0.95));
+        border-color: rgba(82, 45, 128, 0.6);
+        color: #f5efff;
+      }
+      .card-ribbon {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 148px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        padding: 0 8px;
+        border: 1px solid transparent;
+        z-index: 2;
+        pointer-events: none;
+        clip-path: polygon(0 0, 100% 0, 100% 100%, 16% 100%);
+      }
+      .card-ribbon.ok {
+        background: linear-gradient(180deg, rgba(12, 127, 113, 0.95), rgba(0, 75, 69, 0.95));
+        border-color: rgba(0, 75, 69, 0.58);
+        color: #f2fffc;
+      }
+      .card-ribbon.bad {
+        background: linear-gradient(180deg, rgba(107, 62, 167, 0.96), rgba(82, 45, 128, 0.96));
+        border-color: rgba(82, 45, 128, 0.6);
+        color: #f6f0ff;
       }
       .floorplan {
         margin-top: 12px;
@@ -311,6 +406,8 @@
       }
       #selectedPanel {
         display: none;
+        position: relative;
+        overflow: hidden;
       }
       #selectedPanel.active {
         display: block;
@@ -365,6 +462,7 @@
         <div class="card">
           <div class="label">Building Row</div>
           <div class="value" id="roomName">Ivey Row 1220-1210-1200</div>
+          <div class="muted">A live digital twin for breakout-room availability and quick booking decisions.</div>
           <div class="muted">
             Made with &lt;3 from LT8 for LIT!
           </div>
@@ -392,7 +490,7 @@
             <div class="value" id="selectedRoomName">-</div>
             <div class="muted" id="selectedRoomMeta">Select a breakout room from the list or 3D view.</div>
             <div style="margin-top: 10px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap">
-              <span class="tag ok" id="selectedRoomBookable">Bookable</span>
+              <span class="status-pill ok" id="selectedRoomBookable">Bookable</span>
               <span class="status-pill ok" id="selectedStatusPill" style="display: none">Available</span>
             </div>
           </div>
@@ -602,7 +700,7 @@
           pill.style.display = "none";
           return;
         }
-        pill.style.display = "inline-block";
+        pill.style.display = "inline-flex";
         const occ = room.occupancy > 0;
         pill.textContent = occ ? "Occupied" : "Available";
         pill.classList.remove("ok", "bad");
@@ -745,6 +843,10 @@
         document.getElementById("selectedRoomName").textContent = room.room_name;
         document.getElementById("selectedRoomMeta").textContent =
           `Occupancy ${room.occupancy} | Entries ${room.entries} | Exits ${room.exits}`;
+        const bookable = document.getElementById("selectedRoomBookable");
+        const isBooked = !!room.is_booked;
+        bookable.textContent = isBooked ? "Booked" : "Bookable";
+        bookable.className = `status-pill ${isBooked ? "warn" : "ok"}`;
         updateSelectedStatusPill(room);
 
         // Highlight selected mesh and gently zoom/focus the camera.
@@ -783,23 +885,33 @@
       function renderRoomTable() {
         const root = document.getElementById("roomList");
         root.innerHTML = "";
-        const rooms = Array.from(roomDataById.values());
+        const order = ["room-1218", "room-1226", "room-1224", "room-1212", "room-1206", "room-1204"];
+        const rooms = Array.from(roomDataById.values()).sort((a, b) => {
+          const ia = order.indexOf(a.room_id);
+          const ib = order.indexOf(b.room_id);
+          const ra = ia === -1 ? 999 : ia;
+          const rb = ib === -1 ? 999 : ib;
+          return ra - rb;
+        });
         const classroomIds = new Set(["room-1220", "room-1210", "room-1200"]);
         rooms.forEach((room) => {
           if (classroomIds.has(room.room_id)) return;
           const occupied = room.occupancy > 0;
           const isSelected = selectedRoomId === room.room_id;
+          const isBooked = !!room.is_booked;
+          const bookingClass = isBooked ? "warn" : "ok";
+          const bookingLabel = isBooked ? "Booked" : "Bookable";
 
           const item = document.createElement("div");
           item.className = `room-item${isSelected ? " selected details-expanded" : ""}`;
           item.innerHTML = `
+            <span class="status-ribbon ${occupied ? "bad" : "ok"}">${room.status}</span>
             <button class="room-head" data-room-id="${room.room_id}">
               <div>
                 <strong>${room.room_name}</strong><br />
-                <span class="tag ok">Bookable</span>
+                <span class="tag ${bookingClass}">${bookingLabel}</span>
               </div>
               <div>Occ: <strong>${room.occupancy}</strong></div>
-              <div><span class="tag ${occupied ? "bad" : "ok"}">${room.status}</span></div>
             </button>
             <div class="room-details">
               <div class="room-details-inner">
@@ -838,7 +950,16 @@
           const kind = roomKindById.get(room.room_id);
           const occupied = room.occupancy > 0;
           if (kind === "breakout") {
-            mesh.material.color.setHex(occupied ? 0x522d80 : 0x0c7f71);
+            if (room.is_booked && occupied) {
+              // booked + not available
+              mesh.material.color.setHex(0x522d80);
+            } else if (room.is_booked && !occupied) {
+              // booked + available
+              mesh.material.color.setHex(0xac7422);
+            } else {
+              // normal live availability
+              mesh.material.color.setHex(occupied ? 0x522d80 : 0x0c7f71);
+            }
           } else {
             mesh.material.color.setHex(0x57736f);
           }

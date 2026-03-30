@@ -32,8 +32,9 @@ app = Flask(__name__)
 
 # Shared in-memory state (no DB). Guard with a lock since CV thread updates it.
 STATE_LOCK = threading.Lock()
-ROOM_ID = os.environ.get("ROOM_ID", "room-1210")
-ROOM_NAME = os.environ.get("SMARTSPACE_ROOM_NAME", "Room 1210")
+# Live demo room is fixed to 1218 for this MVP.
+ROOM_ID = "room-1218"
+ROOM_NAME = "1218"
 
 STATE = {
     "room_name": ROOM_NAME,
@@ -46,17 +47,22 @@ STATE = {
 # The active camera feed updates ROOM_ID in real time, while other rooms stay available
 # for manual event simulation endpoints during MVP demos.
 ROOMS = {
-    "room-1226": {"room_name": "1226", "occupancy": 0, "entries": 0, "exits": 0},
-    "room-1224": {"room_name": "1224", "occupancy": 0, "entries": 0, "exits": 0},
-    "room-1220": {"room_name": "1220", "occupancy": 0, "entries": 0, "exits": 0},
+    "room-1226": {"room_name": "1226", "occupancy": 0, "entries": 0, "exits": 0, "is_booked": False},
+    # Dummy booked + not available
+    "room-1224": {"room_name": "1224", "occupancy": 3, "entries": 8, "exits": 5, "is_booked": True},
+    "room-1220": {"room_name": "1220", "occupancy": 0, "entries": 0, "exits": 0, "is_booked": False},
     "room-1218": {"room_name": "1218", "occupancy": 0, "entries": 0, "exits": 0},
-    "room-1212": {"room_name": "1212", "occupancy": 0, "entries": 0, "exits": 0},
-    "room-1210": {"room_name": "1210", "occupancy": 0, "entries": 0, "exits": 0},
-    "room-1206": {"room_name": "1206", "occupancy": 0, "entries": 0, "exits": 0},
-    "room-1204": {"room_name": "1204", "occupancy": 0, "entries": 0, "exits": 0},
-    "room-1200": {"room_name": "1200", "occupancy": 0, "entries": 0, "exits": 0},
+    "room-1212": {"room_name": "1212", "occupancy": 0, "entries": 0, "exits": 0, "is_booked": False},
+    "room-1210": {"room_name": "1210", "occupancy": 0, "entries": 0, "exits": 0, "is_booked": False},
+    # Dummy booked + not available
+    "room-1206": {"room_name": "1206", "occupancy": 5, "entries": 11, "exits": 6, "is_booked": True},
+    # Dummy booked + available
+    "room-1204": {"room_name": "1204", "occupancy": 0, "entries": 4, "exits": 4, "is_booked": True},
+    "room-1200": {"room_name": "1200", "occupancy": 0, "entries": 0, "exits": 0, "is_booked": False},
 }
-ROOMS.setdefault(ROOM_ID, {"room_name": ROOM_NAME, "occupancy": 0, "entries": 0, "exits": 0})
+ROOMS.setdefault(
+    ROOM_ID, {"room_name": ROOM_NAME, "occupancy": 0, "entries": 0, "exits": 0, "is_booked": False}
+)
 
 FLOORPLAN_PATH = Path(
     os.environ.get(
@@ -143,6 +149,7 @@ def api_rooms():
         ROOMS[ROOM_ID]["occupancy"] = int(STATE.get("occupancy", 0))
         ROOMS[ROOM_ID]["entries"] = int(STATE.get("entries", 0))
         ROOMS[ROOM_ID]["exits"] = int(STATE.get("exits", 0))
+        ROOMS[ROOM_ID].setdefault("is_booked", False)
 
         rooms = []
         total_occupancy = 0
@@ -152,6 +159,7 @@ def api_rooms():
             occupancy = int(room.get("occupancy", 0))
             entries = int(room.get("entries", 0))
             exits = int(room.get("exits", 0))
+            is_booked = bool(room.get("is_booked", False))
             total_occupancy += occupancy
             total_entries += entries
             total_exits += exits
@@ -162,6 +170,7 @@ def api_rooms():
                     "occupancy": occupancy,
                     "entries": entries,
                     "exits": exits,
+                    "is_booked": is_booked,
                     "status": "Available" if occupancy == 0 else "Occupied",
                 }
             )
@@ -240,6 +249,22 @@ def _chat_reply(message: str) -> str:
 
     with STATE_LOCK:
         live_occ = int(STATE.get("occupancy", 0))
+
+    # --- Fun / custom campus Q&A ---
+    if (
+        "best" in m
+        and "prof" in m
+        and "lit" in m
+        and ("ivey" in m or "professor" in m or "teacher" in m)
+    ):
+        return "Yi(Zoe) Zou"
+
+    if (
+        "best" in m
+        and ("lt" in m or "learning team" in m)
+        and ("section 7" in m or "section vii" in m or "sec 7" in m)
+    ):
+        return "Learning Team 8"
 
     # --- Quiet / least busy (before generic “busy” peak answers) ---
     if any(
